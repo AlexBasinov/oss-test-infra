@@ -11,6 +11,7 @@ presubmits:
           imagePullPolicy: Always
           command:
             - ansible-lint
+
   - name: oracle-toolkit-install-single-instance-on-bms
     cluster: build-gcp-oracle-team
     always_run: true
@@ -61,6 +62,7 @@ presubmits:
               items:
                 - key: google-cloud-sdk.repo
                   path: google-cloud-sdk.repo
+
   - name: oracle-toolkit-install-rac-on-bms
     cluster: build-gcp-oracle-team
     always_run: true
@@ -116,3 +118,43 @@ presubmits:
               items:
                 - key: google-cloud-sdk.repo
                   path: google-cloud-sdk.repo
+
+  - name: oracle-toolkit-install-single-instance-on-gcp
+    cluster: build-gcp-oracle-team
+    always_run: true
+    # Introducing max_concurrency, as noted in the design doc (internal) comment thread: https://docs.google.com/document/d/1mv2nV0Cv6EKv-ZTScv59JdyqvmNfYeMojqFJdJVhdmk/edit?pli=1&disco=AAAAUQ1gyBE
+    max_concurrency: 1
+    decorate: true
+    spec:
+      serviceAccountName: prowjob-default-sa
+      containers:
+      - image: gcr.io/google.com/cloudsdktool/google-cloud-cli:alpine
+        command:
+        # . represents the base directory of the cloned oracle-toolkit repo, which is oracle-toolkit
+        - ./presubmit_tests/single-instance-on-gcp.sh
+        resources:
+          requests:
+            memory: "2.0Gi"
+            cpu: "3.0"
+        volumeMounts:
+        - name: all-in-one
+          mountPath: /etc/files_needed_for_tk
+      volumes:
+      - name: all-in-one
+        projected:
+          sources:
+          - configMap:
+              name: single-instance-gcp-asm
+              items:
+                - key: single-instance-gcp-asm.json
+                  path: single-instance-gcp-asm.json
+          - configMap:
+              name: single-instance-gcp-data-mounts
+              items:
+                - key: single-instance-gcp-data-mounts.json
+                  path: single-instance-gcp-data-mounts.json
+          - configMap:
+              name: single-instance-gcp-inventory
+              items:
+                - key: single-instance-gcp-inventory
+                  path: single-instance-gcp-inventory
